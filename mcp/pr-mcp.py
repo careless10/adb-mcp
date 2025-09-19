@@ -868,6 +868,87 @@ def get_instructions() -> str:
     blend_modes: {", ".join(BLEND_MODES)}
     """
 
+@mcp.tool()
+def explore_clip_properties(sequence_id: str, video_track_index: int, track_item_index: int):
+    """
+    Explores and returns all available properties, effects, and parameters for a specific clip in the timeline.
+
+    This is useful for discovering what properties can be modified on a clip, including
+    all effects (components) and their parameters with current values.
+
+    Args:
+        sequence_id (str): The ID of the sequence containing the clip
+        video_track_index (int): The index of the video track (0 for first track)
+        track_item_index (int): The index of the clip on the track (0 for first clip)
+
+    Returns:
+        Information about the clip including all components (effects) and their parameters
+    """
+
+    command = createCommand("exploreClipProperties", {
+        "sequenceId": sequence_id,
+        "videoTrackIndex": video_track_index,
+        "trackItemIndex": track_item_index
+    })
+
+    return sendCommand(command)
+
+@mcp.tool()
+def set_clip_transform(
+    sequence_id: str,
+    video_track_index: int,
+    track_item_index: int,
+    position: list = None,
+    scale: float = None,
+    rotation: float = None
+):
+    """
+    Sets transform properties (position, scale, rotation) for a video clip in the timeline.
+
+    This modifies the Motion effect parameters on the specified clip. You can set any
+    combination of position, scale, and rotation.
+
+    Args:
+        sequence_id (str): The ID of the sequence containing the clip
+        video_track_index (int): The index of the video track (0 for first track)
+        track_item_index (int): The index of the clip on the track (0 for first clip)
+        position (list, optional): Position as [x, y] coordinates in pixels.
+            For 1920x1080, center would be [960, 540]
+        scale (float, optional): Scale as percentage (100 = normal size, 200 = double size)
+        rotation (float, optional): Rotation in degrees (0-360)
+
+    Returns:
+        Success status and applied transformations
+
+    Example:
+        set_clip_transform(
+            sequence_id="abc123",
+            video_track_index=0,
+            track_item_index=0,
+            position=[960, 540],
+            scale=150,
+            rotation=45
+        )
+    """
+
+    options = {
+        "sequenceId": sequence_id,
+        "videoTrackIndex": video_track_index,
+        "trackItemIndex": track_item_index
+    }
+
+    # Only include parameters that were provided
+    if position is not None:
+        options["position"] = position
+    if scale is not None:
+        options["scale"] = scale
+    if rotation is not None:
+        options["rotation"] = rotation
+
+    command = createCommand("setClipTransform", options)
+
+    return sendCommand(command)
+
 
 BLEND_MODES = [
     "COLOR",

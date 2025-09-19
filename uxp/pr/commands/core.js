@@ -302,6 +302,77 @@ const getProjectInfo = async (command) => {
     return {}
 }
 
+const exploreClipProperties = async (command) => {
+    let options = command.options
+    let id = options.sequenceId
+    let sequence = await _getSequenceFromId(id)
+
+    let trackItem = await getTrack(sequence, options.videoTrackIndex, options.trackItemIndex, TRACK_TYPE.VIDEO)
+
+    console.log("=== Exploring clip properties ===")
+    console.log("Clip name:", trackItem.name)
+
+    let foundInfo = {
+        clipName: trackItem.name,
+        components: []
+    }
+
+    // Get all components (effects) on the clip using the correct API
+    try {
+        let componentChain = await trackItem.getComponentChain()
+        let componentCount = componentChain.getComponentCount()
+
+        console.log(`\nFound ${componentCount} components on clip:`)
+
+        for (let i = 0; i < componentCount; i++) {
+            const component = componentChain.getComponentAtIndex(i)
+            const matchName = await component.getMatchName()
+            console.log(`\n--- Component ${i}: ${matchName} ---`)
+
+            let componentInfo = {
+                index: i,
+                matchName: matchName,
+                parameters: []
+            }
+
+            // Get all parameters for this component
+            try {
+                let paramCount = component.getParamCount()
+                console.log(`  Found ${paramCount} parameters:`)
+
+                for (let j = 0; j < paramCount; j++) {
+                    const param = component.getParam(j)
+                    const paramName = await param.getDisplayName()
+
+                    console.log(`    [${j}] ${paramName}`)
+
+                    // Try to get the current value
+                    try {
+                        let value = await param.getValue()
+                        console.log(`        Current value: ${value}`)
+                        componentInfo.parameters.push({
+                            index: j,
+                            displayName: paramName,
+                            value: value
+                        })
+                    } catch (e) {
+                        console.log(`        Could not get value: ${e.message}`)
+                    }
+                }
+            } catch (e) {
+                console.log(`  Could not get parameters: ${e.message}`)
+            }
+
+            foundInfo.components.push(componentInfo)
+        }
+    } catch (e) {
+        console.log("Could not get components:", e.message)
+    }
+
+    console.log("\n=== End exploration ===")
+    return foundInfo
+}
+
 
 
 const createSequenceFromMedia = async (command) => {
@@ -562,6 +633,121 @@ const exportSequence = async (command) => {
     await manager.exportSequence(sequence, constants.ExportType.IMMEDIATELY, outputPath, presetPath);
 }
 
+// Transform function for position, scale, rotation
+const setClipTransform = async (command) => {
+    let options = command.options
+    let id = options.sequenceId
+    let sequence = await _getSequenceFromId(id)
+    let project = await app.Project.getActiveProject()
+
+    let trackItem = await getTrack(sequence, options.videoTrackIndex, options.trackItemIndex, TRACK_TYPE.VIDEO)
+
+    // First, let's explore what components are actually available
+    console.log("Exploring available components on clip...")
+    let componentChain = await trackItem.getComponentChain()
+    let componentCount = componentChain.getComponentCount()
+
+    for (let i = 0; i < componentCount; i++) {
+        const component = componentChain.getComponentAtIndex(i)
+        const matchName = await component.getMatchName()
+        console.log(`Component ${i}: ${matchName}`)
+    }
+
+    // Based on patterns from opacity/blend mode that work:
+    // Component is "AE.ADBE Opacity" with params "Opacity" and "Blend Mode"
+    // Motion should be similar: "AE.ADBE Motion" or similar
+
+    // Collect parameters that we'll set
+    let paramsToSet = []
+
+    // Try to find Motion parameters
+    // Motion in Premiere is typically under "Motion" or fixed effects
+    if (options.position !== undefined) {
+        try {
+            // Try the most likely component name first
+            let positionParam = await getParam(trackItem, "AE.ADBE Motion", "Position")
+            if (positionParam) {
+                let positionKeyframe = await positionParam.createKeyframe(options.position)
+                paramsToSet.push({ param: positionParam, keyframe: positionKeyframe })
+                console.log("Found Position parameter")
+            } else {
+                console.log("Position parameter not found")
+            }
+        } catch (e) {
+            console.log("Position error:", e.message)
+        }
+    }
+
+    if (options.scale !== undefined) {
+        try {
+            let scaleParam = await getParam(trackItem, "AE.ADBE Motion", "Scale")
+            if (scaleParam) {
+                let scaleKeyframe = await scaleParam.createKeyframe(options.scale)
+                paramsToSet.push({ param: scaleParam, keyframe: scaleKeyframe })
+                console.log("Found Scale parameter")
+            } else {
+                console.log("Scale parameter not found")
+            }
+        } catch (e) {
+            console.log("Scale error:", e.message)
+        }
+    }
+
+    if (options.rotation !== undefined) {
+        try {
+            let rotationParam = await getParam(trackItem, "AE.ADBE Motion", "Rotation")
+            if (rotationParam) {
+                let rotationKeyframe = await rotationParam.createKeyframe(options.rotation)
+                paramsToSet.push({ param: rotationParam, keyframe: rotationKeyframe })
+                console.log("Found Rotation parameter")
+            } else {
+                console.log("Rotation parameter not found")
+            }
+        } catch (e) {
+            console.log("Rotation error:", e.message)
+        }
+    }
+
+    // Apply the changes using execute, following the exact pattern from setVideoClipProperties
+    if (paramsToSet.length > 0) {
+        execute(() => {
+            let actions = []
+            for (const { param, keyframe } of paramsToSet) {
+                actions.push(param.createSetValueAction(keyframe))
+            }
+            return actions
+        }, project)
+
+        return {
+            success: true,
+            appliedTransforms: paramsToSet.length,
+            message: `Applied ${paramsToSet.length} transform(s)`
+        }
+    } else {
+        // If we couldn't find parameters, try to manually check each component
+        console.log("Checking all components and their parameters...")
+
+        for (let i = 0; i < componentCount; i++) {
+            const component = componentChain.getComponentAtIndex(i)
+            const matchName = await component.getMatchName()
+            console.log(`\nComponent ${i}: ${matchName}`)
+
+            try {
+                let paramCount = component.getParamCount()
+                for (let j = 0; j < paramCount; j++) {
+                    const param = component.getParam(j)
+                    const paramName = await param.getDisplayName()
+                    console.log(`  Param ${j}: ${paramName}`)
+                }
+            } catch (e) {
+                console.log(`  Could not get params: ${e.message}`)
+            }
+        }
+
+        throw new Error("Motion parameters not found. Check console output in Premiere Pro for available components.")
+    }
+}
+
 const commandHandlers = {
     exportSequence,
     moveProjectItemsToBin,
@@ -585,6 +771,8 @@ const commandHandlers = {
     addMediaToSequence,
     importMedia,
     createProject,
+    exploreClipProperties,
+    setClipTransform,
 };
 
 module.exports = {

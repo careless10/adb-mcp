@@ -25,11 +25,36 @@ const app = require("premierepro");
 const core = require("./core");
 
 const getProjectInfo = async () => {
-    let project = await app.Project.getActiveProject()
+    console.log("getProjectInfo called");
+    console.log("app object:", app);
+    console.log("app.Project:", app.Project);
+
+    let project = null;
+    try {
+        project = await app.Project.getActiveProject();
+        console.log("getActiveProject result:", project);
+    } catch (e) {
+        console.log("Error calling getActiveProject:", e);
+        throw new Error(`Failed to get active project: ${e.message}`);
+    }
+
+    if (!project) {
+        console.log("Project is null - checking app.project alternative");
+        // Try alternative way to get project
+        if (app.project) {
+            project = app.project;
+            console.log("Using app.project:", project);
+        } else {
+            throw new Error("No project is currently open in Premiere Pro. Please open a project first.");
+        }
+    }
+
+    console.log("Project object:", project);
+    console.log("Project name:", project?.name);
 
     const name = project.name;
     const path = project.path;
-    const id = project.guid.toString();
+    const id = project.guid ? project.guid.toString() : null;
 
     const items = await getProjectContentInfo()
 
@@ -66,6 +91,11 @@ const getProjectContentInfo2 = async () => {
 
 const getProjectContentInfo = async () => {
     let project = await app.Project.getActiveProject()
+
+    if (!project) {
+        return [];  // Return empty array if no project is open
+    }
+
     let root = await project.getRootItem()
     
     const processItems = async (parentItem) => {
@@ -130,7 +160,8 @@ const requiresActiveProject = (command) => {
 };
 
 const commandHandlers = {
-    ...core.commandHandlers
+    ...core.commandHandlers,
+    getProjectInfo  // Override core's empty getProjectInfo with the correct one
 };
 
 module.exports = {

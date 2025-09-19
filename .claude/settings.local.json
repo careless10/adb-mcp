@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(//Users/menawer/Library/Logs/Claude/**)",
+      "Read(//Users/menawer/Library/Application Support/Claude/Claude Extensions Settings/**)",
+      "Read(//var/folders/qj/46hk_kdj6hb2ctfc_pj923kw0000gn/T/TemporaryItems/NSIRD_screencaptureui_4eJM8S/**)",
+      "Read(//Users/menawer/Desktop/Montage/Sho6sho6/**)",
+      "Read(//var/folders/qj/46hk_kdj6hb2ctfc_pj923kw0000gn/T/TemporaryItems/NSIRD_screencaptureui_7YgSj7/**)",
+      "mcp__ide__executeCode",
+      "mcp__ide__getDiagnostics"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}
