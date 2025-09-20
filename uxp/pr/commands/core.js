@@ -2,6 +2,7 @@
 const fs = require("uxp").storage.localFileSystem;
 const app = require("premierepro");
 const constants = require("premierepro").Constants;
+const { PointF } = require("premierepro");
 
 const {BLEND_MODES, TRACK_TYPE } = require("./consts.js")
 
@@ -635,6 +636,7 @@ const exportSequence = async (command) => {
 
 // Transform function for position, scale, rotation
 const setClipTransform = async (command) => {
+
     let options = command.options
     let id = options.sequenceId
     let sequence = await _getSequenceFromId(id)
@@ -642,16 +644,9 @@ const setClipTransform = async (command) => {
 
     let trackItem = await getTrack(sequence, options.videoTrackIndex, options.trackItemIndex, TRACK_TYPE.VIDEO)
 
-    // First, let's explore what components are actually available
-    console.log("Exploring available components on clip...")
-    let componentChain = await trackItem.getComponentChain()
-    let componentCount = componentChain.getComponentCount()
-
-    for (let i = 0; i < componentCount; i++) {
-        const component = componentChain.getComponentAtIndex(i)
-        const matchName = await component.getMatchName()
-        console.log(`Component ${i}: ${matchName}`)
-    }
+    // Get sequence dimensions for position normalization
+    const sequenceWidth = sequence.frameSizeHorizontal || 1089  // Default if undefined
+    const sequenceHeight = sequence.frameSizeVertical || 1359   // Default if undefined
 
     // Based on patterns from opacity/blend mode that work:
     // Component is "AE.ADBE Opacity" with params "Opacity" and "Blend Mode"
@@ -667,11 +662,38 @@ const setClipTransform = async (command) => {
             // Try the most likely component name first
             let positionParam = await getParam(trackItem, "AE.ADBE Motion", "Position")
             if (positionParam) {
-                let positionKeyframe = await positionParam.createKeyframe(options.position)
+                // Position needs to be normalized (0-1 range)
+                // The API multiplies by sequence dimensions
+                const normalizedX = options.position[0] / sequenceWidth
+                const normalizedY = options.position[1] / sequenceHeight
+
+                // Create a PointF object for position with normalized values
+                const pointF = new PointF(normalizedX, normalizedY)
+
+                let positionKeyframe = await positionParam.createKeyframe(pointF)
                 paramsToSet.push({ param: positionParam, keyframe: positionKeyframe })
-                console.log("Found Position parameter")
             } else {
-                console.log("Position parameter not found")
+                console.log("Position parameter not found - trying to find Motion component")
+                // Let's explore what components are available
+                const chain = await trackItem.getComponentChain()
+                const count = await chain.getComponentCount()
+                console.log(`Found ${count} components in chain`)
+
+                for (let i = 0; i < count; i++) {
+                    const comp = await chain.getComponentAtIndex(i)
+                    const matchName = await comp.getMatchName()
+                    const displayName = await comp.getDisplayName()
+                    console.log(`Component ${i}: ${displayName} (${matchName})`)
+
+                    if (matchName === "AE.ADBE Motion") {
+                        const paramCount = comp.getParamCount()
+                        console.log(`  Motion component has ${paramCount} parameters`)
+                        for (let j = 0; j < paramCount; j++) {
+                            const param = comp.getParam(j)
+                            console.log(`    Param ${j}: [checking...]`)
+                        }
+                    }
+                }
             }
         } catch (e) {
             console.log("Position error:", e.message)
@@ -709,6 +731,7 @@ const setClipTransform = async (command) => {
     }
 
     // Apply the changes using execute, following the exact pattern from setVideoClipProperties
+    console.log(`About to apply transforms. paramsToSet.length = ${paramsToSet.length}`)
     if (paramsToSet.length > 0) {
         execute(() => {
             let actions = []

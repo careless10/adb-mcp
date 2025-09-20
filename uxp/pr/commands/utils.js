@@ -78,9 +78,17 @@ const getParam = async (trackItem, componentName, paramName) => {
             for (let j = 0; j < pCount; j++) {
                 const param = component.getParam(j);
 
-                console.log(param.type);
-                console.log(param);
-                if (param.displayName == paramName) {
+                console.log("Param type:", param.type);
+                console.log("Param object:", param);
+
+                // Try to get displayName - it might be a property or a method
+                let paramDisplayName = param.displayName;
+                if (typeof param.getDisplayName === 'function') {
+                    paramDisplayName = await param.getDisplayName();
+                }
+                console.log(`Param ${j} displayName: ${paramDisplayName}`);
+
+                if (paramDisplayName == paramName) {
                     return param;
                 }
             }
