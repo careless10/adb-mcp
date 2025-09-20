@@ -29,7 +29,8 @@
       "mcp__adobe-premiere__set_active_sequence",
       "mcp__adobe-premiere__enable_position_keyframing",
       "Bash(kill:*)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(git commit:*)"
     ],
     "deny": [],
     "ask": []
