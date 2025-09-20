@@ -799,6 +799,33 @@ const enablePositionKeyframing = async (command) => {
     }
 };
 
+const enableScaleKeyframing = async (command) => {
+    const options = command.options;
+    const sequenceId = options.sequenceId;
+    const videoTrackIndex = options.videoTrackIndex;
+    const trackItemIndex = options.trackItemIndex;
+    const enable = options.enable !== undefined ? options.enable : true;
+
+    try {
+        const sequence = await _getSequenceFromId(sequenceId);
+        const trackItems = await getTrackItems(sequence, videoTrackIndex, TRACK_TYPE.VIDEO);
+        const trackItem = trackItems[trackItemIndex];
+
+        await enableKeyframing(trackItem, "AE.ADBE Motion", "Scale", enable);
+
+        return {
+            success: true,
+            message: `${enable ? 'Enabled' : 'Disabled'} scale keyframing for clip on V${videoTrackIndex + 1} at index ${trackItemIndex}`,
+            sequenceId: sequenceId,
+            videoTrackIndex: videoTrackIndex,
+            trackItemIndex: trackItemIndex,
+            enabled: enable
+        };
+    } catch (e) {
+        throw new Error(`Failed to enable scale keyframing: ${e.message || e.toString() || 'Unknown error'}`);
+    }
+};
+
 const commandHandlers = {
     exportSequence,
     moveProjectItemsToBin,
@@ -825,6 +852,7 @@ const commandHandlers = {
     exploreClipProperties,
     setClipTransform,
     enablePositionKeyframing,
+    enableScaleKeyframing,
 };
 
 module.exports = {

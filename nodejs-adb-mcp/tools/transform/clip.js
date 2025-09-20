@@ -168,3 +168,42 @@ export const enablePositionKeyframing = {
     }
   })
 };
+
+export const enableScaleKeyframing = {
+  definition: {
+    name: 'enable_scale_keyframing',
+    description: 'Enable or disable keyframing for the scale property of a clip (stopwatch)',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        sequence_id: {
+          type: 'string',
+          description: 'ID of the sequence'
+        },
+        video_track_index: {
+          type: 'number',
+          description: 'Video track index (0-based)'
+        },
+        track_item_index: {
+          type: 'number',
+          description: 'Item index on the track (0-based)'
+        },
+        enable: {
+          type: 'boolean',
+          default: true,
+          description: 'Whether to enable (true) or disable (false) keyframing'
+        }
+      },
+      required: ['sequence_id', 'video_track_index', 'track_item_index']
+    }
+  },
+  handler: async (args) => ({
+    action: 'enableScaleKeyframing',
+    options: {
+      sequenceId: args.sequence_id,
+      videoTrackIndex: args.video_track_index,
+      trackItemIndex: args.track_item_index,
+      enable: args.enable !== undefined ? args.enable : true
+    }
+  })
+};
