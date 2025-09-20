@@ -33,7 +33,7 @@ const {
 } = require("./commands/index.js");
 
 const APPLICATION = "premiere";
-const PROXY_URL = "http://localhost:3001";
+const PROXY_URL = "http://localhost:3005";
 
 let socket = null;
 
@@ -54,7 +54,7 @@ const onCommandPacket = async (packet) => {
         out.status = "SUCCESS";
         out.sequences = await getSequences();
         out.project = await getProjectInfo();
-        
+
     } catch (e) {
 
         console.log(e)
@@ -136,7 +136,7 @@ function sendCommand(command) {
 entrypoints.setup({
     panels: {
         vanilla: {
-            show(node) {},
+            show(node) { },
         },
     },
 });

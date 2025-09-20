@@ -36,7 +36,7 @@ const { io } = require("./socket.io.js");
 const app = require("photoshop").app;
 
 const APPLICATION = "photoshop";
-const PROXY_URL = "http://localhost:3001";
+const PROXY_URL = "http://localhost:3005";
 
 let socket = null;
 
@@ -180,7 +180,7 @@ let fetchCommands = async () => {
 entrypoints.setup({
     panels: {
         vanilla: {
-            show(node) {},
+            show(node) { },
         },
     },
 });

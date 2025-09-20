@@ -32,7 +32,7 @@ const {
 } = require("./commands/index.js");
 
 const APPLICATION = "indesign";
-const PROXY_URL = "http://localhost:3001";
+const PROXY_URL = "http://localhost:3005";
 
 let socket = null;
 
@@ -67,13 +67,13 @@ function connectToServer() {
 
     const socketOptions = isWindows
         ? {
-              transports: ["polling"],
-              upgrade: false,
-              rememberUpgrade: false,
-          }
+            transports: ["polling"],
+            upgrade: false,
+            rememberUpgrade: false,
+        }
         : {
-              transports: ["websocket"],
-          };
+            transports: ["websocket"],
+        };
     console.log(isWindows);
     console.log(socketOptions);
     socket = io(PROXY_URL, socketOptions);
@@ -142,7 +142,7 @@ function sendCommand(command) {
 entrypoints.setup({
     panels: {
         vanilla: {
-            show(node) {},
+            show(node) { },
         },
     },
 });

@@ -72,21 +72,16 @@ const getParam = async (trackItem, componentName, paramName) => {
         const matchName = await component.getMatchName();
 
         if (matchName == componentName) {
-            console.log(matchName);
             let pCount = component.getParamCount();
 
             for (let j = 0; j < pCount; j++) {
                 const param = component.getParam(j);
-
-                console.log("Param type:", param.type);
-                console.log("Param object:", param);
 
                 // Try to get displayName - it might be a property or a method
                 let paramDisplayName = param.displayName;
                 if (typeof param.getDisplayName === 'function') {
                     paramDisplayName = await param.getDisplayName();
                 }
-                console.log(`Param ${j} displayName: ${paramDisplayName}`);
 
                 if (paramDisplayName == paramName) {
                     return param;
@@ -94,6 +89,7 @@ const getParam = async (trackItem, componentName, paramName) => {
             }
         }
     }
+    return null;
 };
 
 const addEffect = async (trackItem, effectName) => {
@@ -170,6 +166,32 @@ const findProjectItem = async (itemName, project) => {
     return insertItem;
 };
 
+
+const enableKeyframing = async (trackItem, componentName, paramName, enable = true) => {
+    const project = await app.Project.getActiveProject();
+
+    let param = await getParam(trackItem, componentName, paramName);
+
+    if (!param) {
+        throw new Error(`enableKeyframing: Could not find parameter ${paramName} in component ${componentName}`);
+    }
+
+    const supportsKeyframes = await param.areKeyframesSupported();
+    if (!supportsKeyframes) {
+        throw new Error(`enableKeyframing: Parameter ${paramName} does not support keyframes`);
+    }
+
+    const isTimeVarying = param.isTimeVarying();
+
+    if (isTimeVarying === enable) {
+        return;
+    }
+
+    execute(() => {
+        let action = param.createSetTimeVaryingAction(enable);
+        return [action];
+    }, project);
+};
 
 const execute = (getActions, project) => {
     try {
@@ -413,4 +435,5 @@ module.exports = {
     getTracks,
     getSequences,
     getTrack,
+    enableKeyframing,
 };

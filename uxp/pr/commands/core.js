@@ -15,7 +15,8 @@ const {
     findProjectItem,
     execute,
     getTrack,
-    getTrackItems
+    getTrackItems,
+    enableKeyframing
 } = require("./utils.js")
 
 const saveProject = async (command) => {
@@ -771,6 +772,33 @@ const setClipTransform = async (command) => {
     }
 }
 
+const enablePositionKeyframing = async (command) => {
+    const options = command.options;
+    const sequenceId = options.sequenceId;
+    const videoTrackIndex = options.videoTrackIndex;
+    const trackItemIndex = options.trackItemIndex;
+    const enable = options.enable !== undefined ? options.enable : true;
+
+    try {
+        const sequence = await _getSequenceFromId(sequenceId);
+        const trackItems = await getTrackItems(sequence, videoTrackIndex, TRACK_TYPE.VIDEO);
+        const trackItem = trackItems[trackItemIndex];
+
+        await enableKeyframing(trackItem, "AE.ADBE Motion", "Position", enable);
+
+        return {
+            success: true,
+            message: `${enable ? 'Enabled' : 'Disabled'} position keyframing for clip on V${videoTrackIndex + 1} at index ${trackItemIndex}`,
+            sequenceId: sequenceId,
+            videoTrackIndex: videoTrackIndex,
+            trackItemIndex: trackItemIndex,
+            enabled: enable
+        };
+    } catch (e) {
+        throw new Error(`Failed to enable position keyframing: ${e.message || e.toString() || 'Unknown error'}`);
+    }
+};
+
 const commandHandlers = {
     exportSequence,
     moveProjectItemsToBin,
@@ -796,6 +824,7 @@ const commandHandlers = {
     createProject,
     exploreClipProperties,
     setClipTransform,
+    enablePositionKeyframing,
 };
 
 module.exports = {

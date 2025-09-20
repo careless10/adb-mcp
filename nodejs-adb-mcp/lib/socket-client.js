@@ -1,7 +1,7 @@
 import { io } from 'socket.io-client';
 
 class SocketClient {
-  constructor(url = 'ws://localhost:3001') {
+  constructor(url = 'ws://localhost:3005') {
     this.url = url;
     this.socket = null;
     this.isConnected = false;
